@@ -6,17 +6,12 @@ import "fmt"
 // get console arguments and start program
 func main() {
 	// TODO: get n from console input; n - matrix size
-	var n = 10
+	var n = 4
 	indexes := make([]int, n)
 	for i := 0; i < n; i++ {
 		indexes[i] = i
 	}
-	nFact := fact(n)
-	permutations := [][]int{}
-	for i := 0; i < nFact; i++ {
-		permutations = append(permutations, make([]int, n))
-	}
-	permute(indexes, permutations)
+	permutations := permutate(indexes, n)
 	fmt.Println(permutations)
 }
 
@@ -32,13 +27,62 @@ func fact(n int) (fact int) {
 
 // permute calculates the permutations of numbers in the permutations slice
 // TODO verify and make concurrent
-func permute(numbers []int, permutations [][]int) {
-	if len(numbers) == 0 {
+func permutate(iterable []int, r int) (permutations [][]int) {
+	n := len(iterable)
+	nFact := fact(n)
+	for i := 0; i < nFact; i++ {
+		permutations = append(permutations, make([]int, n))
+	}
+	pool := iterable
+
+	if r > n {
 		return
 	}
-	currentI := len(permutations[0]) - len(numbers)
-	for i, number := range numbers {
-		permutations[i][currentI] = number
-		permute(append(numbers[:currentI], numbers[currentI+1:]...), permutations)
+
+	indices := make([]int, n)
+	for i := range indices {
+		indices[i] = i
 	}
+
+	cycles := make([]int, r)
+	for i := range cycles {
+		cycles[i] = n - i
+	}
+
+	result := make([]int, r)
+	for i, el := range indices[:r] {
+		result[i] = pool[el]
+	}
+	index := 0
+	copy(permutations[index], result)
+	index++
+
+	for n > 0 {
+		i := r - 1
+		for ; i >= 0; i-- {
+			cycles[i]--
+			if cycles[i] == 0 {
+				index := indices[i]
+				for j := i; j < n-1; j++ {
+					indices[j] = indices[j+1]
+				}
+				indices[n-1] = index
+				cycles[i] = n - i
+			} else {
+				j := cycles[i]
+				indices[i], indices[n-j] = indices[n-j], indices[i]
+
+				for k := i; k < r; k++ {
+					result[k] = pool[indices[k]]
+				}
+				copy(permutations[index], result)
+				index++
+				break
+			}
+		}
+		if i < 0 {
+			return
+		}
+	}
+	return
 }
