@@ -8,13 +8,14 @@ import (
 )
 
 // RandomLimit - limit of numbers in the generated matrix
-const RandomLimit int = 10
+const RandomLimit int = 100
 
 // get console arguments and start program
 func main() {
 	// TODO: get n from console input; n - matrix size
-	n := 3
-	goRoutineCount := 3
+	start := time.Now()
+	n := 11
+	goRoutineCount := 2
 	matrix := make([][]int, n)
 	for i := 0; i < n; i++ {
 		matrix[i] = make([]int, n)
@@ -30,8 +31,13 @@ func main() {
 	for i := 1; i <= goRoutineCount; i++ {
 		detChannels[i-1] = determinant(matrix, permutations[(i-1)*piece:i*piece])
 	}
-	fmt.Println(matrix)
-	fmt.Println(sumChannels(detChannels))
+	fmt.Println("D =", sumChannels(detChannels))
+	elapsed := time.Since(start)
+	fmt.Printf(
+		"Calculation took %fs for n=%d and %d routine(s)\n",
+		elapsed.Seconds(),
+		n,
+		goRoutineCount)
 }
 
 // It's a kind of magic
