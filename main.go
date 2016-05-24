@@ -13,7 +13,8 @@ const RandomLimit int = 10
 // get console arguments and start program
 func main() {
 	// TODO: get n from console input; n - matrix size
-	var n = 3
+	n := 3
+	goRoutineCount := 3
 	matrix := make([][]int, n)
 	for i := 0; i < n; i++ {
 		matrix[i] = make([]int, n)
@@ -24,25 +25,50 @@ func main() {
 		indexes[i] = i
 	}
 	permutations := getPermutations(indexes, n)
+	detChannels := make([]<-chan int, goRoutineCount)
+	piece := len(permutations) / goRoutineCount
+	for i := 1; i <= goRoutineCount; i++ {
+		detChannels[i-1] = determinant(matrix, permutations[(i-1)*piece:i*piece])
+	}
 	fmt.Println(matrix)
-	fmt.Println(determinant(matrix, permutations))
+	fmt.Println(sumChannels(detChannels))
 }
 
-func determinant(matrix [][]int, permutations [][]int) (det int) {
-	n := len(matrix)
-	rowIndexes := make([]int, n)
-	for i := 0; i < n; i++ {
-		rowIndexes[i] = i
+// It's a kind of magic
+func sumChannels(channels []<-chan int) (sum int) {
+	aggregate := make(chan int)
+	for _, c := range channels {
+		go func(c <-chan int) {
+			aggregate <- <-c
+		}(c)
 	}
-	for _, permutation := range permutations {
-		sign := getDeterminantMultipleSign(permutation)
-		multiple := 1
-		for i, cIndex := range permutation {
-			multiple *= matrix[i][cIndex]
-		}
-		det += sign * multiple
+	for _ = range channels {
+		addend := <-aggregate
+		sum += addend
 	}
 	return
+}
+
+func determinant(matrix [][]int, permutations [][]int) <-chan int {
+	det := make(chan int)
+	go func() {
+		detNum := 0
+		n := len(matrix)
+		rowIndexes := make([]int, n)
+		for i := 0; i < n; i++ {
+			rowIndexes[i] = i
+		}
+		for _, permutation := range permutations {
+			sign := getDeterminantMultipleSign(permutation)
+			multiple := 1
+			for i, cIndex := range permutation {
+				multiple *= matrix[i][cIndex]
+			}
+			detNum += sign * multiple
+		}
+		det <- detNum
+	}()
+	return det
 }
 
 func randomizeMatrix(matrix [][]int) {
