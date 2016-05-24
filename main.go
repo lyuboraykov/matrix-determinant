@@ -6,12 +6,15 @@ import "fmt"
 // get console arguments and start program
 func main() {
 	// TODO: get n from console input; n - matrix size
-	var n = 4
+	var n = 3
 	indexes := make([]int, n)
 	for i := 0; i < n; i++ {
 		indexes[i] = i
 	}
-	permutations := permutate(indexes, n)
+	permutations := getPermutations(indexes, n)
+	for _, permutation := range permutations {
+		fmt.Println(getDeterminantMultiplier(permutation), permutation)
+	}
 	fmt.Println(permutations)
 }
 
@@ -25,9 +28,25 @@ func fact(n int) (fact int) {
 	return
 }
 
+func getDeterminantMultiplier(permutation []int) (multiplier int) {
+	n := len(permutation)
+	inversions := 0
+	for i := 0; i < n; i++ {
+		for j := i; j < n; j++ {
+			if permutation[j] > permutation[i] {
+				inversions++
+			}
+		}
+	}
+	if inversions%2 == 0 {
+		return 1
+	}
+	return -1
+}
+
 // permute calculates the permutations of numbers in the permutations slice
 // TODO verify and make concurrent
-func permutate(iterable []int, r int) (permutations [][]int) {
+func getPermutations(iterable []int, r int) (permutations [][]int) {
 	n := len(iterable)
 	nFact := fact(n)
 	for i := 0; i < nFact; i++ {
