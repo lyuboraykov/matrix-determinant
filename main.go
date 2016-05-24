@@ -1,21 +1,59 @@
 // The main package of the concurrent matrix determinant calculation
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"math/rand"
+	"time"
+)
+
+// RandomLimit - limit of numbers in the generated matrix
+const RandomLimit int = 10
 
 // get console arguments and start program
 func main() {
 	// TODO: get n from console input; n - matrix size
 	var n = 3
+	matrix := make([][]int, n)
+	for i := 0; i < n; i++ {
+		matrix[i] = make([]int, n)
+	}
+	randomizeMatrix(matrix)
 	indexes := make([]int, n)
 	for i := 0; i < n; i++ {
 		indexes[i] = i
 	}
 	permutations := getPermutations(indexes, n)
-	for _, permutation := range permutations {
-		fmt.Println(getDeterminantMultiplier(permutation), permutation)
+	fmt.Println(matrix)
+	fmt.Println(determinant(matrix, permutations))
+}
+
+func determinant(matrix [][]int, permutations [][]int) (det int) {
+	n := len(matrix)
+	rowIndexes := make([]int, n)
+	for i := 0; i < n; i++ {
+		rowIndexes[i] = i
 	}
-	fmt.Println(permutations)
+	for _, permutation := range permutations {
+		sign := getDeterminantMultipleSign(permutation)
+		multiple := 1
+		for i, cIndex := range permutation {
+			multiple *= matrix[i][cIndex]
+		}
+		det += sign * multiple
+	}
+	return
+}
+
+func randomizeMatrix(matrix [][]int) {
+	n := len(matrix)
+	s1 := rand.NewSource(time.Now().UnixNano())
+	r1 := rand.New(s1)
+	for i := 0; i < n; i++ {
+		for j := 0; j < n; j++ {
+			matrix[i][j] = r1.Intn(RandomLimit)
+		}
+	}
 }
 
 // fact calculates the n factorial iteratively
@@ -28,12 +66,12 @@ func fact(n int) (fact int) {
 	return
 }
 
-func getDeterminantMultiplier(permutation []int) (multiplier int) {
+func getDeterminantMultipleSign(permutation []int) (multiplier int) {
 	n := len(permutation)
 	inversions := 0
 	for i := 0; i < n; i++ {
 		for j := i; j < n; j++ {
-			if permutation[j] > permutation[i] {
+			if permutation[i] > permutation[j] {
 				inversions++
 			}
 		}
