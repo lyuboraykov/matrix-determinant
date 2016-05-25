@@ -4,25 +4,39 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"math/rand"
+	"strconv"
 	"time"
 )
 
 // RandomLimit - limit of numbers in the generated matrix
 const RandomLimit int = 100
+const noFile string = "-"
 
 // get console arguments and start program
 func main() {
+	start := time.Now()
 	var t, n int
+	var i string
 	flag.IntVar(&t, "t", 3, "The number of goroutines to be started")
 	flag.IntVar(&n, "n", 3, "The size of the matrix to be generated")
+	flag.StringVar(&i, "i", noFile, "Read the matrix from a file (overrides n)")
 	flag.Parse()
-	start := time.Now()
-	matrix := make([][]int, n)
-	for i := 0; i < n; i++ {
-		matrix[i] = make([]int, n)
+	var matrix [][]int
+	var err error
+	if i != noFile {
+		matrix, err = readMatrixFromFile(i)
+		if err != nil {
+			return
+		}
+	} else {
+		matrix = make([][]int, n)
+		for i := 0; i < n; i++ {
+			matrix[i] = make([]int, n)
+		}
+		randomizeMatrix(matrix)
 	}
-	randomizeMatrix(matrix)
 	indexes := make([]int, n)
 	for i := 0; i < n; i++ {
 		indexes[i] = i
@@ -40,6 +54,48 @@ func main() {
 		elapsed.Seconds(),
 		n,
 		t)
+}
+
+func readMatrixFromFile(fileName string) ([][]int, error) {
+	var matrix [][]int
+	file, err := ioutil.ReadFile(fileName)
+	if err != nil {
+		return nil, err
+	}
+	n := 0
+	nI := 0
+	for _, symbol := range file {
+		if symbol == '\n' {
+			break
+		}
+		n *= 10
+		dig, _ := strconv.Atoi(string(symbol))
+		n += dig
+		nI++
+	}
+	matrix = make([][]int, n)
+	for k := 0; k < n; k++ {
+		matrix[k] = make([]int, n)
+	}
+	i, j := 0, 0
+	currentNumber := 0
+	for _, symbol := range file[nI+1:] {
+		if symbol >= '0' && symbol <= '9' {
+			currentNumber *= 10
+			dig, _ := strconv.Atoi(string(symbol))
+			currentNumber += dig
+		} else if symbol == ' ' {
+			matrix[i][j] = currentNumber
+			j++
+			currentNumber = 0
+		} else if symbol == '\n' {
+			matrix[i][j] = currentNumber
+			i++
+			j = 0
+			currentNumber = 0
+		}
+	}
+	return matrix, nil
 }
 
 // It's a kind of magic
