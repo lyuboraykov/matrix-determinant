@@ -2,6 +2,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"math/rand"
 	"time"
@@ -12,10 +13,11 @@ const RandomLimit int = 100
 
 // get console arguments and start program
 func main() {
-	// TODO: get n from console input; n - matrix size
+	var t, n int
+	flag.IntVar(&t, "t", 3, "The number of goroutines to be started")
+	flag.IntVar(&n, "n", 3, "The size of the matrix to be generated")
+	flag.Parse()
 	start := time.Now()
-	n := 11
-	goRoutineCount := 2
 	matrix := make([][]int, n)
 	for i := 0; i < n; i++ {
 		matrix[i] = make([]int, n)
@@ -26,9 +28,9 @@ func main() {
 		indexes[i] = i
 	}
 	permutations := getPermutations(indexes, n)
-	detChannels := make([]<-chan int, goRoutineCount)
-	piece := len(permutations) / goRoutineCount
-	for i := 1; i <= goRoutineCount; i++ {
+	detChannels := make([]<-chan int, t)
+	piece := len(permutations) / t
+	for i := 1; i <= t; i++ {
 		detChannels[i-1] = determinant(matrix, permutations[(i-1)*piece:i*piece])
 	}
 	fmt.Println("D =", sumChannels(detChannels))
@@ -37,7 +39,7 @@ func main() {
 		"Calculation took %fs for n=%d and %d routine(s)\n",
 		elapsed.Seconds(),
 		n,
-		goRoutineCount)
+		t)
 }
 
 // It's a kind of magic
