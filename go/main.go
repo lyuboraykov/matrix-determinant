@@ -16,7 +16,6 @@ const noFile string = "-"
 
 // get console arguments and start program
 func main() {
-	start := time.Now()
 	var t, n int
 	var i string
 	flag.IntVar(&t, "t", 3, "The number of goroutines to be started")
@@ -42,6 +41,7 @@ func main() {
 		indexes[i] = i
 	}
 	permutations := getPermutations(indexes, n)
+	start := time.Now()
 	detChannels := make([]<-chan int, t)
 	piece := len(permutations) / t
 	for i := 1; i <= t; i++ {
@@ -52,7 +52,7 @@ func main() {
 	fmt.Printf(
 		"Calculation took %fs for n=%d and %d routine(s)\n",
 		elapsed.Seconds(),
-		n,
+		len(matrix[0]),
 		t)
 }
 
