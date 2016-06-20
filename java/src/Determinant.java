@@ -1,19 +1,15 @@
 import java.util.*;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.*;
-import java.util.concurrent.ForkJoinPool;
-import java.util.stream.Collectors;
 
 
 public class Determinant {
 
     private static int matrixSize = 10;
-    private static int threadCount = 2;
+    private static int threadCount = 8;
     private static Boolean quiet = false;
 
     public static void main(String[] args) {
-        Date start = new Date();
         int UPPER_BOUND = 10;
 
         parseArguments(args);
@@ -25,49 +21,39 @@ public class Determinant {
             }
         }
 
+        int[][] permutations = permute(matrixSize);
 
-        ForkJoinPool workerPool = new ForkJoinPool(threadCount);
-
-        try {
-            List<Integer> nums =  workerPool.submit(() -> IntStream.range(0, matrixSize)
-                                                                   .boxed()
-                                                                   .parallel()
-                                                                   .collect(Collectors.toList())).get();
-            List<Stream<Integer>> streams = workerPool.submit(() -> Permutations.of(nums)
-                                                                                .parallel()
-                                                                                .collect(Collectors.toList())).get();
-
-            List<List<Integer>> permutations;
-
-            permutations = workerPool.submit(() -> streams.stream().parallel()
-                                                                   .map((Stream<Integer> stream) -> stream.parallel()
-                                                                                                          .collect(Collectors.toList()))
-                                                                   .collect(Collectors.toList())).get();
-
-            Runnable[] tasks = new Runnable[threadCount];
-            int[] partialResults = new int[threadCount];
-            int permutationsSliceSize = permutations.size() / threadCount;
-            for (int i = 0; i < threadCount; i++) {
-                final int resultIdx = i;
-                int startIndex = resultIdx * permutationsSliceSize;
-                int endIndex = (resultIdx + 1) * permutationsSliceSize;
-                List<List<Integer>> permutationsPiece = permutations.subList(startIndex, endIndex);
-                tasks[i] = () ->  partialResults[resultIdx] = calculateDeterminant(matrix, permutationsPiece);
-                new Thread(tasks[i]).start();
-            }
-            int determinant = IntStream.of(partialResults).sum();
-            for (int[] row: matrix) {
-                for(int el: row) {
-                    System.out.print(el + " ");
-                }
-                System.out.println();
-            }
-            Date end = new Date();
-            System.out.println((end.getTime() - start.getTime()) / 1000.0);
-            System.out.println(determinant);
-        } catch (InterruptedException | ExecutionException exc) {
-            System.out.println(exc);
+        Date start = new Date();
+        Runnable[] tasks = new Runnable[threadCount];
+        Thread[] threads = new Thread[threadCount];
+        int[] partialResults = new int[threadCount];
+        int permutationsSliceSize = permutations.length / threadCount;
+        for (int i = 0; i < threadCount; i++) {
+            final int resultIdx = i;
+            int startIndex = resultIdx * permutationsSliceSize;
+            int endIndex = (resultIdx + 1) * permutationsSliceSize;
+            int[][] permutationsPiece = Arrays.copyOfRange(permutations, startIndex, endIndex);
+            tasks[i] = () ->  partialResults[resultIdx] = calculateDeterminant(matrix, permutationsPiece);
+            threads[i] = new Thread(tasks[i]);
+            threads[i].start();
         }
+        for (Thread thread: threads) {
+            try {
+                thread.join();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+        int determinant = IntStream.of(partialResults).sum();
+        for (int[] row: matrix) {
+            for(int el: row) {
+                System.out.print(el + " ");
+            }
+            System.out.println();
+        }
+        Date end = new Date();
+        System.out.println((end.getTime() - start.getTime()) / 1000.0);
+        System.out.println(determinant);
     }
 
     private static final Map<String, Argument> ARGUMENTS;
@@ -100,7 +86,6 @@ public class Determinant {
 
     private static void doPermute(int[][] permutations, int[] numbers, int col) {
         int n = numbers.length;
-        System.out.println(n);
         if (col == n) {
             permutations[rowNumber] = Arrays.copyOf(numbers, numbers.length);
             rowNumber++;
@@ -127,11 +112,11 @@ public class Determinant {
         return fact;
     }
 
-    private static int determinantSign(List<Integer> permutation) {
+    private static int determinantSign(int[] permutation) {
         int inversions = 0;
-        for (int i = 0; i < permutation.size(); i++) {
-            for (int j = i; j < permutation.size(); j++) {
-                if (permutation.get(j) < permutation.get(i)) {
+        for (int i = 0; i < permutation.length; i++) {
+            for (int j = i; j < permutation.length; j++) {
+                if (permutation[j] < permutation[i]) {
                     inversions++;
                 }
             }
@@ -139,13 +124,13 @@ public class Determinant {
         return (int)Math.pow(-1, inversions % 2);
     }
 
-    private static int calculateDeterminant(int[][] matrix, List<List<Integer>> permutations) {
+    private static int calculateDeterminant(int[][] matrix, int[][] permutations) {
         int determinant = 0;
-        for (List<Integer> permutation: permutations) {
+        for (int[] permutation: permutations) {
             int multiplier = determinantSign(permutation);
             int multiple = 1;
-            for (int i = 0; i < permutation.size(); i++) {
-                multiple *= matrix[i][permutation.get(i)];
+            for (int i = 0; i < permutation.length; i++) {
+                multiple *= matrix[i][permutation[i]];
             }
             determinant += multiplier * multiple;
         }
